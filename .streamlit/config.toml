@@ -1,0 +1,6 @@
+[theme]
+primaryColor = "#00ff85"         # Bright green for primary highlights
+backgroundColor = "#001e1a"      # Deep green-black for the main background
+secondaryBackgroundColor = "#004d40" # Dark green for sidebars or secondary sections
+textColor = "#a7ffeb"            # Light green for text
+font = "sans serif"              # Optional: Customize the font

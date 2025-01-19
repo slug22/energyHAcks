@@ -1,11 +1,13 @@
 import re
+from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
+from sklearn.cluster import KMeans
 
 csv_filename = "usa_pd_2020_1km_ASCII_XYZ.csv"
 
 def read_data():
-    data = pd.read_csv(csv_filename) # this is the line
+    data = pd.read_csv(csv_filename)
     return data
 
 def filter_data(data: pd.DataFrame, x_min, x_max, y_min, y_max):
@@ -35,4 +37,16 @@ if __name__ == "__main__":
     data = read_data()
     # Colorado: -109, -102, 37, 41
     filtered = filter_data(data, -85.9, -84, 33.9, 34)
+    weights = filtered['Z'] / filtered['Z'].sum()
+    coords = filtered[['X', 'Y']].values
+
+    kmeans = KMeans(n_clusters = 4, random_state = 4)
+    kmeans.fit(coords, sample_weight = weights)
+
+    raws = np.array(filtered).T
     
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    ax.scatter(raws[0], raws[1], raws[2])
+    ax.scatter(*kmeans.cluster_centers_.T)
+    plt.show()
