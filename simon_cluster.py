@@ -24,12 +24,13 @@ def haversine_distance(lat1, lon1, lat2, lon2):
     a = np.sin(dlat/2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon/2)**2
     return 6371 * 2 * np.arcsin(np.sqrt(a))
 
-def calculate_population(data):
+def calculate_population(data: pd.DataFrame):
     """Calculate population using area method"""
     if len(data) < 2:
         return 0
-    area = (data["X"].max() - data["X"].min()) * (data["Y"].max() - data["Y"].min()) * KM_PER_DEGREE**2
-    return area * data["Z"].mean()
+    square_area = (0.008333333299987 * 111.32) * (0.0083333333000013 * 111.32)
+    pop = data["Z"].sum() * square_area
+    return pop
 
 def calculate_clusters(data, n_stations, power_per_station_mw=10):
     """
@@ -68,6 +69,8 @@ def calculate_clusters(data, n_stations, power_per_station_mw=10):
     
     # Cluster with density weights
     weights = np.clip(data['Z'], 50, 5000) / data['Z'].sum()
+    weights = -weights + max(weights) + 1
+    #weights = 1 / weights
     kmeans = KMeans(n_clusters=n_stations, random_state=42)
     kmeans.fit(coords, sample_weight=weights)
     

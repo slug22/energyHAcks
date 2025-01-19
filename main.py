@@ -30,9 +30,21 @@ def create_map(data, labels, optimal_locations):
     # HeatMap(heat_data, blur = 30, min_opacity = 5).add_to(m)
     
     colors = [
-        '#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', 
-        '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4',
-        '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000'
+        '#1a237e',  # Deep indigo
+        '#880e4f',  # Dark magenta
+        '#1b5e20',  # Forest green
+        '#4a148c',  # Deep purple
+        '#b71c1c',  # Dark red
+        '#006064',  # Dark cyan
+        '#3e2723',  # Dark brown
+        '#264653',  # Dark slate blue
+        '#7b1fa2',  # Rich purple
+        '#004d40',  # Dark teal
+        '#bf360c',  # Deep orange
+        '#0d47a1',  # Strong blue
+        '#2e7d32',  # Rich green
+        '#827717',  # Dark olive
+        '#4a148c'   # Deep violet
     ]
     for idx, (_, row) in enumerate(data.iterrows()):
         if idx % 2: # TODO: 2 const?
@@ -56,16 +68,25 @@ def create_map(data, labels, optimal_locations):
     
     return m
 
+def calculate_efficiency(data, labels):
+    populations = []
+    
+    num_clusters = len(set(labels))
+    for i in range(num_clusters):
+        labels_mask = labels == i
+        cluster_data = data[labels_mask]
+        populations.append(int(sc.calculate_population(cluster_data)))
+    
+    return populations
 
 atl_lat_lon = [33.78, -84.40]
 
 def main():
-    st.title('Geothermal Pump Placement Optimizer') # TODO: better title
+    st.title('Thermos')
 
     st.sidebar.header('Parameters')
-    # TODO: default values, ranges???
-    station_output = st.sidebar.number_input('Station Output (kW)', min_value=0.1, max_value=10.0, value=1.0, step=0.1)
-    power_usage_per_person = st.sidebar.number_input('Power Usage per Person (kW)', min_value=0.1, max_value=10.0, value=1.0, step=0.1)
+    station_output = st.sidebar.number_input('Station Output (MW)', min_value=1.0, max_value=50.0, value=20.0, step=0.1)
+    power_usage_per_person = st.sidebar.number_input('Power Usage per Person (kW)', min_value=0.1, max_value=5.0, value=0.5, step=0.1)
 
     # TODO: handle too big areas, and if south is norther than north etc
     start_inp = st.sidebar.text_input('Southwest Coordinates (lat, lon)', '33.75, -84.25')
@@ -76,26 +97,27 @@ def main():
     data = load_density_data()
     
     
-    with st.spinner("Loading"):
+    with st.spinner("Loading..."):
         if st.sidebar.button("Optimize"):
             
             try:
                 start_x, start_y = dp.coords_to_xy(start_inp)
                 end_x, end_y = dp.coords_to_xy(end_inp)
             except ValueError:
-                st.error('Invalid coordinates') # TODO: error message
+                st.error('Error: Invalid coordinates')
                 return
-            
+            if start_x >= end_x or start_y >= end_y:
+                st.error('Error: Invalid coordinates')
+                return
+
             filtered_data = dp.filter_data(data, start_x, end_x, start_y, end_y)
             filtered_data = dp.remove_lower_densities(filtered_data)
 
             population = dp.count_population(filtered_data)
             # TODO: output served population?
             power_required = population * power_usage_per_person
-            n_clusters = int(power_required / station_output)
+            n_clusters = int(power_required / (station_output * 1000))
             print(n_clusters)
-            
-            n_clusters = 4 ## TODO: fix the above number being too big
             
             print("starting clustering")
             optimal_locations, labels = sc.calculate_clusters(filtered_data, n_clusters)
@@ -103,18 +125,25 @@ def main():
 
             map = create_map(filtered_data, labels, optimal_locations)
             folium_static(map)
+            
+            cluster_pops = calculate_efficiency(filtered_data, labels)
+            print(cluster_pops)
+            print(sum(cluster_pops) / population)
+            
+            # for i, cluster_pop in enumerate(cluster_pops):
+            #     efficiency = (cluster_pop * power_usage_per_person) / (station_output * 1000)
+            #     percent_efficiency = min(efficiency, 100.0) * 100##
+            #     st.write(f"Station {i + 1} has {int(percent_efficiency)}% efficiency")
 
-
-    # st.subheader('Station Statistics')
-    # stats_df = pd.DataFrame({
-    #     'Station': range(1, len(optimal_locations) + 1),
-    #     'X': optimal_locations['X'],
-    #     'Y': optimal_locations['Y'],
-    #     'Service Radius (deg)': service_radii,
-    #     'Population Served': [clustered_data[clustered_data['cluster'] == i]['Z'].sum() for i in range(len(optimal_locations))]
-    # })
-    # st.dataframe(stats_df)
-    # st.download_button(label="Download Results CSV", data=stats_df.to_csv(index=False), file_name="pump_stations.csv", mime="text/csv")
+            # TODO: csv of optimal locations and populations served
+            st.subheader('Station Statistics')
+            stats_df = pd.DataFrame({
+                'Station': range(1, len(optimal_locations) + 1),
+                'Coordinates': [str(location) for location in optimal_locations],
+                'Population Served': cluster_pops
+            })
+            st.dataframe(stats_df)
+            st.download_button(label="Download Results CSV", data=stats_df.to_csv(index=False), file_name="pump_stations.csv", mime="text/csv")
 
 if __name__ == "__main__":
     main()
