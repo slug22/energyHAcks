@@ -15,6 +15,35 @@ def filter_data(data: pd.DataFrame, x_min, x_max, y_min, y_max):
         (data["X"] > x_min) & (data["X"] < x_max) &
         (data["Y"] > y_min) & (data["Y"] < y_max)]
 
+def remove_lower_densities(pop_data: pd.DataFrame) -> pd.DataFrame:
+    """
+    Remove the lower third of density points from the population dataset.
+    
+    Parameters:
+    -----------
+    pop_data : pd.DataFrame
+        DataFrame containing population density data with a 'Z' column for density values
+        
+    Returns:
+    --------
+    pd.DataFrame
+        Filtered DataFrame with only the upper 2/3 of density points
+    """
+    # Calculate the density threshold at 33rd percentile
+    density_threshold = pop_data['Z'].quantile(0.33)
+    
+    # Filter out points below the threshold
+    filtered_data = pop_data[pop_data['Z'] >= density_threshold].copy()
+    
+    # Reset the index for clean data
+    filtered_data.reset_index(drop=True, inplace=True)
+    
+    print(f"Original points: {len(pop_data):,}")
+    print(f"Points after density filtering: {len(filtered_data):,}")
+    print(f"Density threshold: {density_threshold:.2f}")
+    
+    return filtered_data
+    
 def count_population(pop_data: pd.DataFrame):
     
     x_range = pop_data["X"].max() - pop_data["X"].min()

@@ -35,6 +35,8 @@ def create_map(data, labels, optimal_locations):
         '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000'
     ]
     for idx, (_, row) in enumerate(data.iterrows()):
+        if idx % 2: # TODO: 2 const?
+            continue
         cluster_id = labels[idx]
         color = colors[cluster_id % len(colors)]
         folium.CircleMarker(
@@ -47,7 +49,7 @@ def create_map(data, labels, optimal_locations):
             #popup=f'Cluster {cluster_id + 1}<br>Population Density: {row["Z"]:.1f}'
         ).add_to(m)
     
-    for idx, (lon, lat) in enumerate(optimal_locations):
+    for idx, (lat, lon) in enumerate(optimal_locations):
         folium.CircleMarker(location=[lat, lon], radius = 10, color = 'green',
                             fill = True, popup=f'Pump Station {idx+1}').add_to(m)
         # folium.Circle(location=[row['Y'], row['X']], radius=service_radii[idx] * 111000, color='blue', fill=False, popup=f'Service Radius: {service_radii[idx]:.2f} degrees').add_to(m)
@@ -65,7 +67,7 @@ def main():
     station_output = st.sidebar.number_input('Station Output (kW)', min_value=0.1, max_value=10.0, value=1.0, step=0.1)
     power_usage_per_person = st.sidebar.number_input('Power Usage per Person (kW)', min_value=0.1, max_value=10.0, value=1.0, step=0.1)
 
-    # TODO: handle too big areas
+    # TODO: handle too big areas, and if south is norther than north etc
     start_inp = st.sidebar.text_input('Southwest Coordinates (lat, lon)', '33.75, -84.25')
     end_inp = st.sidebar.text_input('Northeast Coordinates (lat, lon)', '34, -84')
 
@@ -74,7 +76,7 @@ def main():
     data = load_density_data()
     
     
-    with st.spinner():
+    with st.spinner("Loading"):
         if st.sidebar.button("Optimize"):
             
             try:
@@ -85,10 +87,13 @@ def main():
                 return
             
             filtered_data = dp.filter_data(data, start_x, end_x, start_y, end_y)
+            filtered_data = dp.remove_lower_densities(filtered_data)
+
             population = dp.count_population(filtered_data)
             # TODO: output served population?
             power_required = population * power_usage_per_person
             n_clusters = int(power_required / station_output)
+            print(n_clusters)
             
             n_clusters = 4 ## TODO: fix the above number being too big
             
