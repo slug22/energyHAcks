@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
 
+import simon_cluster as sc
+
 csv_filename = "usa_pd_2020_1km_ASCII_XYZ.csv"
 
 def read_data():
@@ -29,8 +31,8 @@ def remove_lower_densities(pop_data: pd.DataFrame) -> pd.DataFrame:
     pd.DataFrame
         Filtered DataFrame with only the upper 2/3 of density points
     """
-    # Calculate the density threshold at 33rd percentile
-    density_threshold = pop_data['Z'].quantile(0.33)
+    # Calculate the density threshold at percentile
+    density_threshold = pop_data['Z'].quantile(0.25)
     
     # Filter out points below the threshold
     filtered_data = pop_data[pop_data['Z'] >= density_threshold].copy()
@@ -79,3 +81,14 @@ if __name__ == "__main__":
     ax.scatter(raws[0], raws[1], raws[2])
     ax.scatter(*kmeans.cluster_centers_.T)
     plt.show()
+
+def calculate_efficiency(data, labels):
+    populations = []
+    
+    num_clusters = len(set(labels))
+    for i in range(num_clusters):
+        labels_mask = labels == i
+        cluster_data = data[labels_mask]
+        populations.append(int(sc.calculate_population(cluster_data)))
+    
+    return populations
