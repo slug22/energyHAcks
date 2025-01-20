@@ -106,7 +106,7 @@ def main():
 
     start_inp = st.sidebar.text_input('Southwest Coordinates (lat, lon)', '33.75, -84.50')
     end_inp = st.sidebar.text_input('Northeast Coordinates (lat, lon)', '34.00, -84.25')
-    
+
     data = load_density_data()
 
     if st.sidebar.button("Optimize"):
@@ -162,8 +162,8 @@ def main():
                 with col1:
                     st.metric("Annual CO₂ Savings vs Coal",
                             f"{impact['coal_savings']:,} tons",
-                            "Compared to coal power plants")
-                    
+                            "Vs. coal power plants")
+                
                 with col2:
                     st.metric("Equivalent to Trees Planted",
                             f"{impact['trees_equivalent']:,} trees",
